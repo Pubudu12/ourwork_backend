@@ -1,0 +1,159 @@
+"A date string with format `Y-m-d`, e.g. `2011-05-23`."
+scalar Date @scalar(class: "Nuwave\\Lighthouse\\Schema\\Types\\Scalars\\Date")
+
+"A datetime string with format `Y-m-d H:i:s`, e.g. `2018-05-23 13:43:32`."
+scalar DateTime @scalar(class: "Nuwave\\Lighthouse\\Schema\\Types\\Scalars\\DateTime")
+
+type Query {
+    users: [User!]! @paginate(defaultCount: 10)
+    user(id: ID @eq): User @find
+
+    # ------->> All Tags --------------------->>
+    blog_tags: [blog_tag]! @paginate
+
+    # ------->> All Categories --------------->>
+    blog_categories: [blog_category]! @paginate
+
+    # ------->> All Posts -------------------->>
+    posts(status: Int @eq): [blog_posts!]! @paginate @orderBy(column: "post_date", direction: "DESC")
+
+    # ------->> Post By Slug URL ------------->>
+    post_by_slug(title: String @eq): [meta_title]! @all
+
+    # # ------->> Related Posts ------------->>
+    # related_posts(title: String @eq): [meta_title]! @field(resolver: "App\\GraphQL\\Queries\\BlogPostsQuery@related_posts")
+
+    # ------->> Popular Posts ---------------->>
+    popular_posts(popular: popular @eq): [blog_posts]! @paginate @orderBy(column: "post_date", direction: "DESC")
+
+    # ------->> Recent Posts ----------------->>
+    recent_posts: [blog_posts!]! @paginate @orderBy(column: "post_date", direction: "DESC")
+    
+    # ------->> Post By Category ------------->>
+    post_by_category(name: String @eq): [blog_category]! @paginate 
+    # post_count_by_category(name: String @eq): [blog_category]! @paginate 
+    
+    # ------->> Post By Keyword -------------->>
+    searchByKeyword(text: String): [blog_posts!] @paginate  @builder(resolver: "App\\GraphQL\\Queries\\SearchByKeyword@search_posts")
+
+    # ------->> Post By Tags ------------->>
+    post_by_tags(name: String @eq): [blog_tag!]! @paginate
+
+    # ------->> All Gallery Items --------------------->>
+    gallery_items: [gallery]! @paginate @orderBy(column: "created_at", direction: "DESC")
+
+    case_studies: [case_study!]! @paginate
+
+    caseStudy(id: ID @eq): case_study @find
+    
+    post_highlight(highlight: highlight @eq): [blog_posts]! @paginate @orderBy(column: "post_date", direction: "DESC")
+
+    # blog_videos: [blog_posts!]  @field(resolver: "App\\GraphQL\\Queries\\BlogPostsQuery@blog_videos")
+    # blog_videos: [blog_posts!] @field(resolver: "App\\GraphQL\\Queries\\BlogPostsQuery@blog_videos")
+    blog_videos(media_type: String @eq): [blog_post_attachments] @all
+
+}
+
+type case_study {
+    id: ID! 
+    code: String
+    content: bytea
+    order: Int
+    status: Int
+}
+
+type blog_posts {
+    id: ID!
+    title: String! @search
+    description: String!
+    post_date: Date!
+    slug: [meta_title!]! @hasMany
+    category: blog_category! @belongsTo
+    highlight: highlight!   
+    content: blog_post_content @belongsTo
+    attachments: [blog_post_attachments!]! @field(resolver: "App\\GraphQL\\Types\\BlogPostsType@attachments")
+    popular: popular!   
+    tags: [blog_tag!]! @field(resolver: "App\\GraphQL\\Queries\\BlogPostsQuery@tags")
+}
+
+type blog_post_attachments {
+    id: ID! 
+    media_type: String 
+    name: String
+    post_id: Int 
+    video: String
+    image_url: String! @field(resolver: "App\\GraphQL\\Queries\\BlogPostsQuery@image_url")
+    blog_posts(id:ID @eq): [blog_posts!]! @field(resolver: "App\\GraphQL\\Queries\\BlogPostsQuery@blog_videos")
+}
+
+type blog_post_content {
+    id: ID! 
+    content: String
+    post: [blog_posts!]! @hasOne
+}
+
+type meta_title {
+    id: ID!
+    title: String!
+    post: blog_posts! @belongsTo
+}
+
+type blog_category {
+    id: ID! 
+    code: String
+    name: String
+    posts: [blog_posts!]! @hasMany (type: "paginator") @orderBy(column: "post_date", direction: "DESC")
+}
+
+type blog_post_tags {
+    id: ID!
+    post_id: Int
+    tag_id: Int
+    blog_posts: blog_posts @belongsTo
+    # posts(id: ID! @eq): [blog_posts!]!
+    # post: [blog_posts!]! @hasMany
+}
+
+type blog_tag {
+    id: ID!
+    code: String
+    name: String
+    blog_post_tags: [blog_post_tags!]! @hasMany (type: "paginator")
+    # tag_posts: [blog_posts!]! @hasMany
+    # tag_posts: [blog_posts!]!@field(resolver: "App\\GraphQL\\Queries\\BlogPostsQuery@tag_posts")
+}
+
+enum popular {
+    YES @enum(value: 1)
+    NO @enum(value: 0)
+}
+
+enum highlight {
+    YES @enum(value: 1)
+    NO @enum(value: 0)
+}
+
+input searchInput {
+    text: String 
+}
+
+type User {
+    id: ID!
+    name: String!
+    email: String!
+    created_at: DateTime!
+    updated_at: DateTime!
+}
+
+type gallery{
+    id: ID!
+    image: String
+    video:  String
+    video_type:String
+    text: String
+    image_url: String! @field(resolver: "App\\GraphQL\\Queries\\GalleryQuery@image_url")
+    item_type: String!
+    created_at: DateTime!
+    updated_at: DateTime!
+}
+
